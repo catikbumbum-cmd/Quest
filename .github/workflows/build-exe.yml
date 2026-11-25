@@ -1,0 +1,45 @@
+name: Build QuestPanel.exe
+
+# For the layout where the project files sit in the QuestPanel-source/ folder of the repository.
+# Builds QuestPanel.exe on a Windows runner and attaches it to the run as a downloadable artifact.
+# The tests run last: the exe is already uploaded by then, so a failing or stuck test cannot cost you the build.
+# Runs on every push and from the "Run workflow" button on the Actions tab.
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: QuestPanel-source
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PyInstaller
+        run: python -m pip install pyinstaller
+
+      - name: Install pywebview (optional, the app falls back to an Edge or Chrome app window without it)
+        continue-on-error: true
+        run: python -m pip install pywebview
+
+      - name: Build the exe
+        run: python -m PyInstaller --noconsole --onefile --name QuestPanel --add-data "panel.html;." quest_app.py
+
+      - name: Upload the exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: QuestPanel
+          path: QuestPanel-source/dist/QuestPanel.exe
+          if-no-files-found: error
+
+      - name: Run tests (informational, the exe is already uploaded)
+        continue-on-error: true
+        timeout-minutes: 3
+        run: python -m unittest -v
