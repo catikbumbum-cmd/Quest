@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="ru" translate="no">
+<head>
+<meta charset="utf-8">
+<meta name="google" content="notranslate">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Панель квестов</title>
+<style nonce="__NONCE__">
+:root {
+  --bg: #EFEBF8;
+  --surface: #FAF8FE;
+  --field: #F1EDFA;
+  --ink: #211A3F;
+  --soft: #5B5480;
+  --line: #D9D3EC;
+  --accent: #5B3FEA;
+  --accent-ink: #FFFFFF;
+  --orb-hi: #A68BFF;
+  --orb-lo: #5B3FEA;
+  --orb-empty: #E1DBF3;
+  --orb-rim: #CFC6EA;
+  --ok: #0A735A;
+  --ok-fill: #0E8F6E;
+  --ok-hi: #4FD1AB;
+  --warn: #9A5B00;
+  --err: #C72D45;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #16122B;
+    --surface: #1F1A3A;
+    --field: #271F49;
+    --ink: #EEEAFF;
+    --soft: #A59FCB;
+    --line: #352E5C;
+    --accent: #8B73FF;
+    --accent-ink: #16122B;
+    --orb-hi: #B7A3FF;
+    --orb-lo: #7357F2;
+    --orb-empty: #2A2450;
+    --orb-rim: #3B3470;
+    --ok: #3DD6A8;
+    --ok-fill: #12A37F;
+    --ok-hi: #5BE0B9;
+    --warn: #F0B04A;
+    --err: #FF6B81;
+  }
+}
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.5 "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", sans-serif;
+}
+.app { max-width: 1120px; margin: 0 auto; padding: 28px 16px 56px; }
+.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+h1 {
+  margin: 0;
+  font: 800 2.6rem/1.05 "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+  letter-spacing: -0.03em;
+}
+h2 { margin: 0; font-size: 1.05rem; font-weight: 700; }
+.pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 14px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--surface);
+  font-size: 0.9rem; font-weight: 600;
+}
+.pill::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--soft); }
+.pill[data-tone="ok"]::before { background: var(--ok-fill); }
+.pill[data-tone="err"]::before { background: var(--err); }
+.layout { display: grid; grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); gap: 24px; align-items: start; }
+.side { display: grid; gap: 16px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+.card > h2 + * { margin-top: 12px; }
+.hint { margin: 0 0 12px; color: var(--soft); font-size: 0.9rem; }
+.note { margin: 10px 0 0; min-height: 1.4em; font-size: 0.9rem; color: var(--soft); }
+.note[data-tone="err"] { color: var(--err); font-weight: 600; }
+label.field { display: block; margin-bottom: 12px; font-size: 0.9rem; font-weight: 600; }
+label.field input, label.field textarea {
+  display: block; width: 100%; margin-top: 4px; padding: 9px 11px;
+  border: 1px solid var(--line); border-radius: 10px;
+  background: var(--field); color: var(--ink);
+  font: 400 0.95rem/1.4 ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+label.field textarea { resize: vertical; }
+label.check { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; font-size: 0.95rem; }
+label.check input { width: 18px; height: 18px; accent-color: var(--accent); }
+button {
+  font: inherit; font-weight: 600;
+  padding: 9px 16px; border-radius: 10px;
+  border: 1px solid var(--line); background: transparent; color: var(--ink);
+  cursor: pointer;
+}
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+button.danger { color: var(--err); border-color: var(--err); }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+details { margin-top: 14px; font-size: 0.9rem; color: var(--soft); }
+details summary { cursor: pointer; font-weight: 600; color: var(--ink); }
+details ol { margin: 8px 0 0; padding-left: 20px; }
+details label.field { margin-top: 10px; }
+
+.list-card { padding: 0; overflow: hidden; }
+.bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 16px 18px; border-bottom: 1px solid var(--line); }
+.bar .count { color: var(--soft); font-weight: 400; margin-left: 6px; }
+.quests { list-style: none; margin: 0; padding: 0; }
+.quest + .quest { border-top: 1px solid var(--line); }
+.quest-label { display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: 14px; align-items: center; padding: 14px 18px; cursor: pointer; }
+.quest[data-off="1"] .quest-label { cursor: default; }
+.quest[data-off="1"] .name { color: var(--soft); }
+.quest[data-off="1"] .orb[data-done="0"] { opacity: 0.55; }
+.quest[data-off="1"] .quest-check { opacity: 0.5; }
+.quest-check { width: 18px; height: 18px; accent-color: var(--accent); }
+.info { display: grid; gap: 2px; min-width: 0; }
+.name { font-weight: 700; overflow-wrap: anywhere; }
+.meta { color: var(--soft); font-size: 0.9rem; }
+.status { font-size: 0.9rem; font-weight: 600; color: var(--soft); }
+.status[data-tone="ok"] { color: var(--ok); }
+.status[data-tone="warn"] { color: var(--warn); }
+.status[data-tone="err"] { color: var(--err); }
+.status[data-tone="busy"] { color: var(--accent); }
+.empty { margin: 0; padding: 28px 18px; color: var(--soft); }
+
+.orb {
+  --p: 0;
+  position: relative; flex: none; width: 60px; height: 60px;
+  border-radius: 50%; overflow: hidden;
+  background: var(--orb-empty);
+  box-shadow: inset 0 0 0 2px var(--orb-rim);
+}
+.orb .fill {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  height: calc(var(--p) * 1%);
+  background: linear-gradient(180deg, var(--orb-hi), var(--orb-lo));
+  transition: height 0.9s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.orb .fill::before {
+  content: ""; position: absolute; left: -12%; right: -12%; top: -6px; height: 12px;
+  border-radius: 50%; background: var(--orb-hi);
+}
+.orb[data-p="0"] .fill::before { display: none; }
+.orb[data-p="100"] .fill::before { display: none; }
+.orb::after {
+  content: ""; position: absolute; top: 6px; left: 11px; right: 11px; height: 13px;
+  border-radius: 50%; background: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0));
+  pointer-events: none;
+}
+.orb[data-done="1"] .fill { background: linear-gradient(180deg, var(--ok-hi), var(--ok-fill)); }
+.orb .mark { position: absolute; inset: 0; display: grid; place-items: center; color: #FFFFFF; font-size: 24px; font-weight: 800; opacity: 0; }
+.orb[data-done="1"] .mark { opacity: 1; }
+.quest[data-busy="1"] .fill::before { animation: drift 2.8s ease-in-out infinite alternate; }
+@keyframes drift { from { transform: translateX(-7%); } to { transform: translateX(7%); } }
+
+.log-card { margin-top: 24px; }
+.log { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--field); padding: 8px 12px; }
+.log ul { list-style: none; margin: 0; padding: 0; }
+.log li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; font: 0.85rem/1.55 ui-monospace, "Cascadia Mono", Consolas, monospace; overflow-wrap: anywhere; }
+.log time { color: var(--soft); }
+.log .log-error { color: var(--err); }
+.log .log-warning { color: var(--warn); }
+.log .hint { margin: 4px 0; }
+
+@media (max-width: 820px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  h1 { font-size: 2.1rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .orb .fill { transition: none; }
+  .quest[data-busy="1"] .fill::before { animation: none; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <h1>Квесты</h1>
+    <span class="pill" id="conn" data-tone="off">Не подключено</span>
+  </header>
+
+  <div class="layout">
+    <div class="side">
+      <section class="card" aria-labelledby="h-connect">
+        <h2 id="h-connect">Подключение</h2>
+        <div id="connect-wrap">
+          <p class="hint">Значения хранятся только в памяти сервера панели. На диск они не пишутся и обратно на страницу не возвращаются.</p>
+          <form id="connect-form" autocomplete="off">
+            <label class="field">Authorization
+              <input id="f-token" type="password" spellcheck="false" autocomplete="off">
+            </label>
+            <label class="field">X-Super-Properties
+              <textarea id="f-sprops" rows="3" spellcheck="false" autocomplete="off"></textarea>
+            </label>
+            <label class="field">User-Agent
+              <input id="f-ua" type="text" spellcheck="false" autocomplete="off">
+            </label>
+            <div class="row">
+              <button class="primary" type="submit" id="btn-connect">Подключиться</button>
+              <button type="button" id="btn-env" hidden>Взять из переменных окружения</button>
+            </div>
+          </form>
+          <details>
+            <summary>Где взять эти значения</summary>
+            <ol>
+              <li>Открой discord.com/app в браузере и нажми F12, вкладка Network.</li>
+              <li>Кликни любой запрос к /api/ и найди в Request Headers строки authorization, x-super-properties и user-agent.</li>
+              <li>Скопируй значения без названия заголовка.</li>
+            </ol>
+          </details>
+        </div>
+        <div id="connected-wrap" hidden>
+          <p class="hint">Данные подключения лежат в памяти сервера панели. Кнопка ниже удаляет их оттуда.</p>
+          <button type="button" id="btn-disconnect">Отключиться</button>
+        </div>
+        <p class="note" id="connect-note" role="status"></p>
+      </section>
+
+      <section class="card" aria-labelledby="h-run">
+        <h2 id="h-run">Запуск</h2>
+        <p class="hint" id="run-summary">Выбрано квестов: 0</p>
+        <label class="check"><input type="checkbox" id="f-dry"> Только показать план</label>
+        <div class="row">
+          <button class="primary" type="button" id="btn-run" disabled>Запустить</button>
+          <button class="danger" type="button" id="btn-stop" disabled>Остановить</button>
+        </div>
+        <details>
+          <summary>Дополнительно</summary>
+          <label class="field">ID канала для квестов PLAY_ACTIVITY
+            <input id="f-channel" type="text" inputmode="numeric" spellcheck="false" autocomplete="off">
+          </label>
+          <label class="field">executable_path, если выбран один квест
+            <input id="f-exe" type="text" spellcheck="false" autocomplete="off">
+          </label>
+        </details>
+        <p class="note" id="run-note" role="status"></p>
+      </section>
+    </div>
+
+    <section class="card list-card" aria-labelledby="h-quests">
+      <div class="bar">
+        <h2 id="h-quests">Доступные квесты<span class="count" id="quest-count"></span></h2>
+        <div class="row">
+          <button type="button" id="btn-select" disabled>Выбрать все</button>
+          <button type="button" id="btn-clear" disabled>Снять выбор</button>
+          <button type="button" id="btn-refresh" disabled>Обновить</button>
+        </div>
+      </div>
+      <ul class="quests" id="quest-list"></ul>
+      <p class="empty" id="empty">Подключись слева, и здесь появятся твои квесты.</p>
+    </section>
+  </div>
+
+  <section class="card log-card" aria-labelledby="h-log">
+    <h2 id="h-log">Журнал</h2>
+    <div class="log" id="log" role="log" tabindex="0">
+      <ul id="log-list"></ul>
+      <p class="hint" id="log-empty">Здесь появятся события подключения и запуска.</p>
+    </div>
+  </section>
+</div>
+
+<script nonce="__NONCE__">
+(function () {
+  "use strict";
+
+  var $ = function (id) { return document.getElementById(id); };
+  var KEY = new URLSearchParams(location.hash.slice(1)).get("k") || "";
+  try { history.replaceState(null, "", location.pathname); } catch (e) { /* ignore */ }
+
+  var TASK_LABEL = {
+    WATCH_VIDEO: "Видео",
+    WATCH_VIDEO_ON_MOBILE: "Видео в мобильном приложении",
+    PLAY_ON_DESKTOP: "Игра на компьютере",
+    PLAY_ACTIVITY: "Активность в голосовом канале",
+    PLAY_ON_XBOX: "Игра на Xbox",
+    PLAY_ON_PLAYSTATION: "Игра на PlayStation",
+    ACHIEVEMENT_IN_ACTIVITY: "Достижение в активности",
+    STREAM_ON_DESKTOP: "Стрим с компьютера"
+  };
+
+  var state = { connected: false, running: false, quests: [] };
+  var selected = new Set();
+  var rows = new Map();
+  var logCursor = 0;
+  var timer = 0;
+
+  var listEl = $("quest-list");
+  var logList = $("log-list");
+
+  function el(tag, cls, text) {
+    var node = document.createElement(tag);
+    if (cls) { node.className = cls; }
+    if (text !== undefined) { node.textContent = text; }
+    return node;
+  }
+
+  function fmt(seconds) {
+    var s = Math.round(seconds);
+    if (s < 60) { return s + " с"; }
+    var m = Math.floor(s / 60);
+    var r = s % 60;
+    return r ? m + " мин " + r + " с" : m + " мин";
+  }
+
+  function api(path, body) {
+    var opts = { headers: { "X-Panel-Key": KEY } };
+    if (body !== undefined) {
+      opts.method = "POST";
+      opts.headers["Content-Type"] = "application/json";
+      opts.body = JSON.stringify(body);
+    }
+    return fetch(path, opts).then(function (res) {
+      return res.json().catch(function () { return null; }).then(function (data) {
+        if (!res.ok) { throw new Error((data && data.error) || "Ошибка " + res.status); }
+        return data;
+      });
+    }, function () {
+      throw new Error("Сервер панели недоступен. Запусти quest_panel.py снова.");
+    });
+  }
+
+  function setNote(id, text, tone) {
+    var node = $(id);
+    node.textContent = text || "";
+    node.dataset.tone = tone || "";
+  }
+
+  function setPill(text, tone) {
+    var pill = $("conn");
+    pill.textContent = text;
+    pill.dataset.tone = tone;
+  }
+
+  function percent(q) {
+    if (q.state === "completed" || q.state === "claimed" || (q.run && q.run.status === "completed")) { return 100; }
+    if (!q.target) { return 0; }
+    var done = q.run ? q.run.done : q.done;
+    return Math.max(0, Math.min(100, Math.round(done / q.target * 100)));
+  }
+
+  function describe(q) {
+    var run = q.run;
+    if (run) {
+      switch (run.status) {
+        case "queued": return ["В очереди", "muted"];
+        case "running": return ["Идёт, " + percent(q) + "%", "busy"];
+        case "completed": return ["Готово. Награду забери на вкладке Quests в клиенте", "ok"];
+        case "unconfirmed": return ["Сервер не подтвердил. Проверь вкладку Quests в клиенте", "warn"];
+        case "stopped": return [run.message || "Остановлено", "warn"];
+        case "planned": return [run.message || "В плане", "muted"];
+        case "blocked": return [run.message || "Заблокировано", "err"];
+        case "error": return [run.message || "Ошибка", "err"];
+        default: break;
+      }
+    }
+    if (q.state === "claimed") { return ["Награда забрана", "ok"]; }
+    if (q.state === "completed") { return ["Выполнен. Награду забери на вкладке Quests в клиенте", "ok"]; }
+    if (!q.supported) { return ["Тип задания не поддерживается", "muted"]; }
+    if (q.skip_reason) {
+      return [q.skip_reason.indexOf("expired") === 0 ? "Срок истёк" : q.skip_reason, "muted"];
+    }
+    return [q.state === "enrolled" ? "Записан" : "Новый", "muted"];
+  }
+
+  function metaText(q) {
+    if (q.task) { return (TASK_LABEL[q.task] || q.task) + ", " + fmt(q.target); }
+    var kinds = Object.keys(q.tasks).map(function (k) { return TASK_LABEL[k] || k; });
+    return kinds.length ? kinds.join(", ") : "Задания не распознаны";
+  }
+
+  function makeRow(q) {
+    var li = el("li", "quest");
+    var label = el("label", "quest-label");
+    var cb = el("input", "quest-check");
+    cb.type = "checkbox";
+    cb.addEventListener("change", function () {
+      if (cb.checked) { selected.add(q.id); } else { selected.delete(q.id); }
+      refreshControls();
+    });
+    var orb = el("div", "orb");
+    var fill = el("div", "fill");
+    var mark = el("span", "mark", "✓");
+    orb.append(fill, mark);
+    var info = el("div", "info");
+    var name = el("strong", "name");
+    var meta = el("span", "meta");
+    var status = el("span", "status");
+    info.append(name, meta, status);
+    label.append(cb, orb, info);
+    li.append(label);
+    return { li: li, cb: cb, orb: orb, name: name, meta: meta, status: status };
+  }
+
+  function updateRow(r, q) {
+    var pct = percent(q);
+    var finished = pct === 100 && (q.state === "completed" || q.state === "claimed" || (q.run && q.run.status === "completed"));
+    var pair = describe(q);
+    r.name.textContent = q.name;
+    r.meta.textContent = metaText(q);
+    r.status.textContent = pair[0];
+    r.status.dataset.tone = pair[1];
+    r.orb.style.setProperty("--p", String(pct));
+    r.orb.dataset.p = String(pct);
+    r.orb.dataset.done = finished ? "1" : "0";
+    r.li.dataset.busy = q.run && q.run.status === "running" ? "1" : "0";
+    r.li.dataset.off = q.selectable ? "0" : "1";
+    if (!q.selectable) { selected.delete(q.id); }
+    r.cb.disabled = state.running || !q.selectable;
+    r.cb.checked = selected.has(q.id);
+  }
+
+  function renderQuests(list) {
+    var seen = new Set();
+    var prev = null;
+    list.forEach(function (q) {
+      seen.add(q.id);
+      var r = rows.get(q.id);
+      if (!r) { r = makeRow(q); rows.set(q.id, r); }
+      updateRow(r, q);
+      var ref = prev ? prev.li.nextSibling : listEl.firstChild;
+      if (r.li !== ref) { listEl.insertBefore(r.li, ref); }
+      prev = r;
+    });
+    Array.from(rows.keys()).forEach(function (id) {
+      if (!seen.has(id)) { rows.get(id).li.remove(); rows.delete(id); selected.delete(id); }
+    });
+    var selectable = list.filter(function (q) { return q.selectable; }).length;
+    $("quest-count").textContent = state.connected ? " (можно запустить: " + selectable + " из " + list.length + ")" : "";
+    var empty = $("empty");
+    empty.hidden = list.length > 0;
+    if (!list.length) {
+      empty.textContent = state.connected
+        ? "Discord не вернул ни одного квеста. Нажми «Обновить»."
+        : "Подключись слева, и здесь появятся твои квесты.";
+    }
+  }
+
+  function refreshControls() {
+    var count = 0;
+    var seconds = 0;
+    state.quests.forEach(function (q) {
+      if (selected.has(q.id)) {
+        count += 1;
+        seconds += Math.max(0, q.target - (q.run ? q.run.done : q.done));
+      }
+    });
+    $("run-summary").textContent = count
+      ? "Выбрано квестов: " + count + ". Оценка по сумме целей: около " + fmt(seconds) + ". Это не замер."
+      : "Выбрано квестов: 0";
+    $("btn-run").disabled = !state.connected || state.running || count === 0;
+    $("btn-stop").disabled = !state.running;
+    $("btn-refresh").disabled = !state.connected;
+    $("btn-select").disabled = !state.connected || state.running;
+    $("btn-clear").disabled = !state.connected || state.running;
+    $("connect-wrap").hidden = state.connected;
+    $("connected-wrap").hidden = !state.connected;
+  }
+
+  function appendLog(entries) {
+    if (!entries.length) { return; }
+    var box = $("log");
+    var atEnd = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+    entries.forEach(function (e) {
+      var li = el("li", "log-" + e.level);
+      li.append(el("time", "", e.t), el("span", "", e.msg));
+      logList.append(li);
+    });
+    while (logList.children.length > 400) { logList.firstChild.remove(); }
+    $("log-empty").hidden = true;
+    if (atEnd) { box.scrollTop = box.scrollHeight; }
+  }
+
+  function apply(s) {
+    state.connected = s.connected;
+    state.running = s.running;
+    state.quests = s.quests;
+    if (s.log_last < logCursor) {
+      logList.textContent = "";
+      $("log-empty").hidden = false;
+    }
+    logCursor = s.log_last;
+    $("btn-env").hidden = !s.env_ready || s.connected;
+    setPill(s.connected ? (s.running ? "Подключено, идёт запуск" : "Подключено") : "Не подключено",
+            s.connected ? "ok" : "off");
+    renderQuests(s.quests);
+    appendLog(s.log);
+    refreshControls();
+  }
+
+  function poll() {
+    clearTimeout(timer);
+    if (!KEY) { return; }
+    api("/api/state?since=" + logCursor).then(function (s) {
+      apply(s);
+      timer = setTimeout(poll, s.running ? 1000 : 4000);
+    }, function (err) {
+      setPill("Нет связи с сервером", "err");
+      setNote("connect-note", err.message, "err");
+      timer = setTimeout(poll, 4000);
+    });
+  }
+
+  function act(path, body, noteId, pending) {
+    setNote(noteId, pending || "", "");
+    return api(path, body).then(function () {
+      setNote(noteId, "", "");
+      poll();
+      return true;
+    }, function (err) {
+      setNote(noteId, err.message, "err");
+      return false;
+    });
+  }
+
+  $("connect-form").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var button = $("btn-connect");
+    button.disabled = true;
+    act("/api/connect", {
+      token: $("f-token").value.trim(),
+      super_properties: $("f-sprops").value.trim(),
+      user_agent: $("f-ua").value.trim()
+    }, "connect-note", "Подключаюсь…").then(function (ok) {
+      button.disabled = false;
+      if (ok) {
+        $("f-token").value = "";
+        $("f-sprops").value = "";
+        $("f-ua").value = "";
+      }
+    });
+  });
+
+  $("btn-env").addEventListener("click", function () {
+    act("/api/connect", { use_env: true }, "connect-note", "Подключаюсь…");
+  });
+  $("btn-disconnect").addEventListener("click", function () {
+    selected.clear();
+    act("/api/disconnect", {}, "connect-note");
+  });
+  $("btn-refresh").addEventListener("click", function () {
+    act("/api/refresh", {}, "run-note", "Обновляю список…");
+  });
+  $("btn-stop").addEventListener("click", function () {
+    act("/api/stop", {}, "run-note", "Останавливаю, это займёт несколько секунд…");
+  });
+  $("btn-run").addEventListener("click", function () {
+    act("/api/run", {
+      quest_ids: Array.from(selected),
+      channel_id: $("f-channel").value.trim(),
+      exe_path: $("f-exe").value.trim(),
+      dry_run: $("f-dry").checked
+    }, "run-note");
+  });
+  $("btn-select").addEventListener("click", function () {
+    state.quests.forEach(function (q) { if (q.selectable) { selected.add(q.id); } });
+    renderQuests(state.quests);
+    refreshControls();
+  });
+  $("btn-clear").addEventListener("click", function () {
+    selected.clear();
+    renderQuests(state.quests);
+    refreshControls();
+  });
+
+  if (!KEY) {
+    setNote("connect-note", "Открой панель по адресу из окна терминала: в нём есть ключ доступа.", "err");
+    $("btn-connect").disabled = true;
+  }
+  refreshControls();
+  poll();
+}());
+</script>
+</body>
+</html>
